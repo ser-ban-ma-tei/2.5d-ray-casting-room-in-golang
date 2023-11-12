@@ -12,7 +12,7 @@ const (
 	PLAYER_MOVE_LEFT      uint8 = 2
 	PLAYER_MOVE_RIGHT     uint8 = 3
 
-	PLAYER_SPEED = 5.0
+	PLAYER_SPEED = 4.0
 )
 
 func updatePlayerPosition(floatElapsedTime float64) {
