@@ -17,44 +17,46 @@ const (
 
 func updatePlayerPosition(floatElapsedTime float64) {
 	speed := PLAYER_SPEED * floatElapsedTime
+	cosA := math.Cos(playerA)
+	sinA := math.Sin(playerA)
 
 	if keyPressedState[sdl.K_w] {
-		playerX += math.Sin(playerA) * speed
-		playerY += math.Cos(playerA) * speed
+		playerX += cosA * speed
+		playerY += sinA * speed
 
 		if string(mapRoom[int(playerY)*int(mapWidth)+int(playerX)]) == "#" {
-			playerX -= math.Sin(playerA) * speed
-			playerY -= math.Cos(playerA) * speed
+			playerX -= cosA * speed
+			playerY -= sinA * speed
 		}
 	}
 
 	if keyPressedState[sdl.K_s] {
-		playerX -= math.Sin(playerA) * speed
-		playerY -= math.Cos(playerA) * speed
+		playerX -= cosA * speed
+		playerY -= sinA * speed
 
 		if string(mapRoom[int(playerY)*int(mapWidth)+int(playerX)]) == "#" {
-			playerX += math.Sin(playerA) * speed
-			playerY += math.Cos(playerA) * speed
+			playerX += cosA * speed
+			playerY += sinA * speed
 		}
 	}
 
 	if keyPressedState[sdl.K_a] {
-		playerX -= math.Cos(playerA) * speed
-		playerY += math.Sin(playerA) * speed
+		playerX += sinA * speed
+		playerY -= cosA * speed
 
 		if string(mapRoom[int(playerY)*int(mapWidth)+int(playerX)]) == "#" {
-			playerX += math.Cos(playerA) * speed
-			playerY -= math.Sin(playerA) * speed
+			playerX -= sinA * speed
+			playerY += cosA * speed
 		}
 	}
 
 	if keyPressedState[sdl.K_d] {
-		playerX += math.Cos(playerA) * speed
-		playerY -= math.Sin(playerA) * speed
+		playerX -= sinA * speed
+		playerY += cosA * speed
 
 		if string(mapRoom[int(playerY)*int(mapWidth)+int(playerX)]) == "#" {
-			playerX -= math.Cos(playerA) * speed
-			playerY += math.Sin(playerA) * speed
+			playerX += sinA * speed
+			playerY -= cosA * speed
 		}
 	}
 }

@@ -23,8 +23,8 @@ var (
 )
 
 var (
-	mapWidth  byte    = 16
-	mapHeight byte    = 16
+	mapWidth  int32   = 16
+	mapHeight int32   = 16
 	mapDepth  float64 = 16.0
 )
 
@@ -36,6 +36,14 @@ const (
 var mapRoom string
 
 var keyPressedState = make(map[sdl.Keycode]bool)
+
+type f2d struct {
+	X, Y float64
+}
+
+type i2d struct {
+	X, Y int32
+}
 
 func initRoom() {
 	mapRoom += "################"
@@ -101,20 +109,33 @@ func run() int {
 
 	wallPixels := wallImage.Pixels()
 
-	isGameRunning := true
-
-	tp1 := time.Now()
-	var tp2 time.Time
-
 	mouseSensitivity := 0.04
 	sdl.SetRelativeMouseMode(true)
 	defer sdl.SetRelativeMouseMode(false)
 
+	isGameRunning := true
+
+	lastTime := time.Now()
+	lastTimeFps := lastTime
+	var currentTime time.Time
+	fpsCounter := 0
+	currentFps := 0
+
 	for isGameRunning {
-		tp2 = time.Now()
-		elapsedTime := tp2.Sub(tp1)
-		tp1 = tp2
+		currentTime = time.Now()
+		elapsedTime := currentTime.Sub(lastTime)
+		elapsedTimeFps := currentTime.Sub(lastTimeFps)
+		lastTime = currentTime
 		var floatElapsedTime float64 = elapsedTime.Seconds()
+
+		fpsCounter++
+		if elapsedTimeFps.Milliseconds() > 1000 {
+			currentFps = fpsCounter
+			fpsCounter = 0
+			lastTimeFps = currentTime
+
+			window.SetTitle(fmt.Sprintf("%s - FPS: %d", windowTitle, currentFps))
+		}
 
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			switch t := event.(type) {
@@ -140,48 +161,72 @@ func run() int {
 		for x := int32(0); x < windowWidth; x++ {
 			rayAngle := (playerA - playerFOV/2.0) + (float64(x)/float64(windowWidth))*playerFOV
 
-			distanceToWall := 0.0
+			rayStart := f2d{X: playerX, Y: playerY}
+			rayDirection := f2d{X: math.Cos(rayAngle), Y: math.Sin(rayAngle)}
+
+			rayUnitStepSize := f2d{X: math.Sqrt(1 + math.Pow((rayDirection.Y/rayDirection.X), 2)), Y: math.Sqrt(1 + math.Pow((rayDirection.X/rayDirection.Y), 2))}
+			mapCheck := i2d{X: int32(math.Trunc(rayStart.X)), Y: int32(math.Trunc(rayStart.Y))}
+			rayLength := f2d{}
+			step := i2d{}
+
+			if rayDirection.X < 0 {
+				step.X = -1
+				rayLength.X = (rayStart.X - float64(mapCheck.X)) * rayUnitStepSize.X
+			} else {
+				step.X = 1
+				rayLength.X = (float64(mapCheck.X+1) - rayStart.X) * rayUnitStepSize.X
+			}
+
+			if rayDirection.Y < 0 {
+				step.Y = -1
+				rayLength.Y = (rayStart.Y - float64(mapCheck.Y)) * rayUnitStepSize.Y
+			} else {
+				step.Y = 1
+				rayLength.Y = (float64(mapCheck.Y+1) - rayStart.Y) * rayUnitStepSize.Y
+			}
+
 			isWallHit := false
-
-			eyeX := math.Sin(rayAngle)
-			eyeY := math.Cos(rayAngle)
-
+			distanceToWall := 0.0
 			sampleX := 0.0
 
-			for !isWallHit && distanceToWall <= mapDepth {
-				distanceToWall += 0.02
+			for !isWallHit && distanceToWall < mapDepth {
+				if rayLength.X < rayLength.Y {
+					mapCheck.X += step.X
+					distanceToWall = rayLength.X
+					rayLength.X += rayUnitStepSize.X
+				} else {
+					mapCheck.Y += step.Y
+					distanceToWall = rayLength.Y
+					rayLength.Y += rayUnitStepSize.Y
+				}
 
-				testX := int(playerX + eyeX*distanceToWall)
-				testY := int(playerY + eyeY*distanceToWall)
-
-				if testX < 0 || testX >= int(mapWidth) || testY < 0 || testY >= int(mapHeight) {
+				if mapCheck.X < 0 || mapCheck.X >= mapWidth || mapCheck.Y < 0 || mapCheck.Y >= mapHeight {
 					isWallHit = true
 					distanceToWall = mapDepth
 				} else {
-					if string(mapRoom[testY*int(mapWidth)+testX]) == "#" {
+					if string(mapRoom[mapCheck.Y*mapWidth+mapCheck.X]) == "#" {
 						isWallHit = true
 
-						blockMidX := float64(testX) + 0.5
-						blockMidY := float64(testY) + 0.5
+						blockMidX := float64(mapCheck.X) + 0.5
+						blockMidY := float64(mapCheck.Y) + 0.5
 
-						testPointX := playerX + eyeX*distanceToWall
-						testPointY := playerY + eyeY*distanceToWall
+						testPointX := playerX + rayDirection.X*distanceToWall
+						testPointY := playerY + rayDirection.Y*distanceToWall
 
 						testAngle := math.Atan2(testPointY-blockMidY, testPointX-blockMidX)
 
 						if testAngle >= -1*math.Pi*0.25 && testAngle < math.Pi*0.25 {
-							sampleX = testPointY - float64(testY)
+							sampleX = testPointY - float64(mapCheck.Y)
 						}
 						if testAngle >= math.Pi*0.25 && testAngle < math.Pi*0.75 {
-							sampleX = testPointX - float64(testX)
+							sampleX = testPointX - float64(mapCheck.X)
 						}
 						if testAngle < -1*math.Pi*0.25 && testAngle >= -1*math.Pi*0.75 {
-							sampleX = testPointX - float64(testX)
+							sampleX = testPointX - float64(mapCheck.X)
 						}
 						if testAngle >= math.Pi*0.75 || testAngle < -1*math.Pi*0.75 {
-							sampleX = testPointY - float64(testY)
+							sampleX = testPointY - float64(mapCheck.Y)
 						}
-
 					}
 				}
 			}
@@ -198,6 +243,7 @@ func run() int {
 					if distanceToWall < mapDepth {
 						sampleY := (float64(y) - float64(ceiling)) / (float64(floor) - float64(ceiling))
 						pixelColor := sampleImageColor(wallPixels, sampleX, sampleY, WALL_IMAGE_WIDTH)
+						pixelColor.A = 255
 						setTexturePixel(pixels, x, y, windowWidth, pixelColor)
 					} else {
 						setTexturePixel(pixels, x, y, windowWidth, sdl.Color{R: 0, G: 0, B: 0, A: 255})
