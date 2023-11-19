@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	WINDOW_TITLE string = "Sewer City"
+	WINDOW_TITLE string = "2.5D game"
 	WINDOW_WIDTH int32 = 1280
 	WINDOW_HEIGHT int32 = 720
 
@@ -22,6 +22,14 @@ const (
 
 	WALL_IMAGE_WIDTH  int = 160
 	WALL_IMAGE_HEIGHT int = 160
+
+	PLAYER_MOVE_FORWARD   uint8 = 0
+	PLAYER_MOVE_BACKWARDS uint8 = 1
+	PLAYER_MOVE_LEFT      uint8 = 2
+	PLAYER_MOVE_RIGHT     uint8 = 3
+
+	PLAYER_SPEED float64 = 4.0
+	MOUSE_SENSITIVITY float64 = 0.04
 )
 
 var (
@@ -46,18 +54,18 @@ type i2d struct {
 func initRoom() {
 	mapRoom += "################"
 	mapRoom += "#..............#"
-	mapRoom += "#..............#"
-	mapRoom += "#..............#"
-	mapRoom += "#....##........#"
-	mapRoom += "#....##........#"
-	mapRoom += "#....##........#"
-	mapRoom += "#....##........#"
-	mapRoom += "#....##........#"
-	mapRoom += "#..............#"
-	mapRoom += "#..............#"
-	mapRoom += "#..............#"
+	mapRoom += "#.........#....#"
 	mapRoom += "#.........######"
+	mapRoom += "#...##.........#"
+	mapRoom += "#...##.........#"
+	mapRoom += "#...##.........#"
+	mapRoom += "#...##.........#"
+	mapRoom += "#...##.........#"
 	mapRoom += "#..............#"
+	mapRoom += "#..............#"
+	mapRoom += "#..............#"
+	mapRoom += "#..............#"
+	mapRoom += "#######........#"
 	mapRoom += "#..............#"
 	mapRoom += "################"
 }
@@ -104,7 +112,7 @@ func run() int {
 
 	wallPixels := wallImage.Pixels()
 
-	mouseSensitivity := 0.04
+	
 	sdl.SetRelativeMouseMode(true)
 	defer sdl.SetRelativeMouseMode(false)
 
@@ -138,10 +146,28 @@ func run() int {
 				isGameRunning = false
 
 			case *sdl.MouseMotionEvent:
-				playerA += float64(t.XRel) * mouseSensitivity * floatElapsedTime
+				playerA += float64(t.XRel) * MOUSE_SENSITIVITY * floatElapsedTime
 
 			case *sdl.KeyboardEvent:
-				handleKeyboardEvent(t, &isGameRunning)
+				// if t.State == sdl.PRESSED && t.Keysym.Sym == sdl.K_ESCAPE {
+				// 	isGameRunning = false
+				// }
+			
+				if t.Keysym.Sym == sdl.K_w {
+					keyPressedState[sdl.K_w] = t.State == sdl.PRESSED
+				}
+			
+				if t.Keysym.Sym == sdl.K_s {
+					keyPressedState[sdl.K_s] = t.State == sdl.PRESSED
+				}
+			
+				if t.Keysym.Sym == sdl.K_a {
+					keyPressedState[sdl.K_a] = t.State == sdl.PRESSED
+				}
+			
+				if t.Keysym.Sym == sdl.K_d {
+					keyPressedState[sdl.K_d] = t.State == sdl.PRESSED
+				}
 			}
 		}
 
@@ -159,25 +185,25 @@ func run() int {
 			rayStart := f2d{X: playerX, Y: playerY}
 			rayDirection := f2d{X: math.Cos(rayAngle), Y: math.Sin(rayAngle)}
 
-			rayUnitStepSize := f2d{X: math.Sqrt(1 + math.Pow((rayDirection.Y/rayDirection.X), 2)), Y: math.Sqrt(1 + math.Pow((rayDirection.X/rayDirection.Y), 2))}
-			mapCheck := i2d{X: int32(math.Trunc(rayStart.X)), Y: int32(math.Trunc(rayStart.Y))}
+			rayStepSize := f2d{X: math.Sqrt(1 + math.Pow((rayDirection.Y/rayDirection.X), 2)), Y: math.Sqrt(1 + math.Pow((rayDirection.X/rayDirection.Y), 2))}
+			mapPoint := i2d{X: int32(math.Trunc(rayStart.X)), Y: int32(math.Trunc(rayStart.Y))}
 			rayLength := f2d{}
 			step := i2d{}
 
 			if rayDirection.X < 0 {
 				step.X = -1
-				rayLength.X = (rayStart.X - float64(mapCheck.X)) * rayUnitStepSize.X
+				rayLength.X = (rayStart.X - float64(mapPoint.X)) * rayStepSize.X
 			} else {
 				step.X = 1
-				rayLength.X = (float64(mapCheck.X+1) - rayStart.X) * rayUnitStepSize.X
+				rayLength.X = (float64(mapPoint.X+1) - rayStart.X) * rayStepSize.X
 			}
 
 			if rayDirection.Y < 0 {
 				step.Y = -1
-				rayLength.Y = (rayStart.Y - float64(mapCheck.Y)) * rayUnitStepSize.Y
+				rayLength.Y = (rayStart.Y - float64(mapPoint.Y)) * rayStepSize.Y
 			} else {
 				step.Y = 1
-				rayLength.Y = (float64(mapCheck.Y+1) - rayStart.Y) * rayUnitStepSize.Y
+				rayLength.Y = (float64(mapPoint.Y+1) - rayStart.Y) * rayStepSize.Y
 			}
 
 			isWallHit := false
@@ -186,24 +212,24 @@ func run() int {
 
 			for !isWallHit && distanceToWall < MAP_DEPTH {
 				if rayLength.X < rayLength.Y {
-					mapCheck.X += step.X
+					mapPoint.X += step.X
 					distanceToWall = rayLength.X
-					rayLength.X += rayUnitStepSize.X
+					rayLength.X += rayStepSize.X
 				} else {
-					mapCheck.Y += step.Y
+					mapPoint.Y += step.Y
 					distanceToWall = rayLength.Y
-					rayLength.Y += rayUnitStepSize.Y
+					rayLength.Y += rayStepSize.Y
 				}
 
-				if mapCheck.X < 0 || mapCheck.X >= MAP_WIDTH || mapCheck.Y < 0 || mapCheck.Y >= MAP_HEIGHT {
+				if mapPoint.X < 0 || mapPoint.X >= MAP_WIDTH || mapPoint.Y < 0 || mapPoint.Y >= MAP_HEIGHT {
 					isWallHit = true
 					distanceToWall = MAP_DEPTH
 				} else {
-					if string(mapRoom[mapCheck.Y*MAP_WIDTH+mapCheck.X]) == "#" {
+					if string(mapRoom[mapPoint.Y*MAP_WIDTH+mapPoint.X]) == "#" {
 						isWallHit = true
 
-						blockMidX := float64(mapCheck.X) + 0.5
-						blockMidY := float64(mapCheck.Y) + 0.5
+						blockMidX := float64(mapPoint.X) + 0.5
+						blockMidY := float64(mapPoint.Y) + 0.5
 
 						testPointX := playerX + rayDirection.X*distanceToWall
 						testPointY := playerY + rayDirection.Y*distanceToWall
@@ -211,16 +237,16 @@ func run() int {
 						testAngle := math.Atan2(testPointY-blockMidY, testPointX-blockMidX)
 
 						if testAngle >= -1*math.Pi*0.25 && testAngle < math.Pi*0.25 {
-							wallTextureSampleX = testPointY - float64(mapCheck.Y)
+							wallTextureSampleX = testPointY - float64(mapPoint.Y)
 						}
 						if testAngle >= math.Pi*0.25 && testAngle < math.Pi*0.75 {
-							wallTextureSampleX = testPointX - float64(mapCheck.X)
+							wallTextureSampleX = testPointX - float64(mapPoint.X)
 						}
 						if testAngle < -1*math.Pi*0.25 && testAngle >= -1*math.Pi*0.75 {
-							wallTextureSampleX = testPointX - float64(mapCheck.X)
+							wallTextureSampleX = testPointX - float64(mapPoint.X)
 						}
 						if testAngle >= math.Pi*0.75 || testAngle < -1*math.Pi*0.75 {
-							wallTextureSampleX = testPointY - float64(mapCheck.Y)
+							wallTextureSampleX = testPointY - float64(mapPoint.Y)
 						}
 					}
 				}
@@ -290,6 +316,62 @@ func sampleImageColor(pixels []byte, x, y float64, width int) sdl.Color {
 	}
 
 	return getPixelColor(pixels, sx, sy, width)
+}
+
+func updatePlayerPosition(floatElapsedTime float64) {
+	speed := PLAYER_SPEED * floatElapsedTime
+	cosA := math.Cos(playerA)
+	sinA := math.Sin(playerA)
+
+	if keyPressedState[sdl.K_w] {
+		playerX += cosA * speed
+		playerY += sinA * speed
+
+		if string(mapRoom[int(playerY)*int(MAP_WIDTH)+int(playerX)]) == "#" {
+			playerX -= cosA * speed
+			playerY -= sinA * speed
+		}
+	}
+
+	if keyPressedState[sdl.K_s] {
+		playerX -= cosA * speed
+		playerY -= sinA * speed
+
+		if string(mapRoom[int(playerY)*int(MAP_WIDTH)+int(playerX)]) == "#" {
+			playerX += cosA * speed
+			playerY += sinA * speed
+		}
+	}
+
+	if keyPressedState[sdl.K_a] {
+		playerX += sinA * speed
+		playerY -= cosA * speed
+
+		if string(mapRoom[int(playerY)*int(MAP_WIDTH)+int(playerX)]) == "#" {
+			playerX -= sinA * speed
+			playerY += cosA * speed
+		}
+	}
+
+	if keyPressedState[sdl.K_d] {
+		playerX -= sinA * speed
+		playerY += cosA * speed
+
+		if string(mapRoom[int(playerY)*int(MAP_WIDTH)+int(playerX)]) == "#" {
+			playerX += sinA * speed
+			playerY -= cosA * speed
+		}
+	}
+}
+
+func getCurrentWorkingDirectory() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to get current working directory: %s", err)
+		os.Exit(1)
+	}
+
+	return cwd
 }
 
 func main() {
