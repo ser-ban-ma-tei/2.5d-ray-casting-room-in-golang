@@ -183,7 +183,6 @@ func run() int {
 			isWallHit := false
 			distanceToWall := 0.0
 			wallTextureSampleX := 0.0
-			floorTextureSampleX := 0.0
 
 			for !isWallHit && distanceToWall < MAP_DEPTH {
 				if rayLength.X < rayLength.Y {
@@ -245,10 +244,7 @@ func run() int {
 						setTexturePixel(pixels, x, y, WINDOW_WIDTH, sdl.Color{R: 0, G: 0, B: 0, A: 255})
 					}
 				} else {
-					floorTextureSampleY := (float64(y) - float64(floor)) / (float64(floor) - float64(ceiling))
-					pixelColor := sampleImageColor(wallPixels, floorTextureSampleX, floorTextureSampleY, WALL_IMAGE_WIDTH)
-					pixelColor.A = 255
-					setTexturePixel(pixels, x, y, WINDOW_WIDTH, pixelColor)
+					setTexturePixel(pixels, x, y, WINDOW_WIDTH, sdl.Color{R: 0, G: 80, B: 0, A: 255})
 				}
 			}
 		}
