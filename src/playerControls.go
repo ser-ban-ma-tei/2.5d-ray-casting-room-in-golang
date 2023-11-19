@@ -24,7 +24,7 @@ func updatePlayerPosition(floatElapsedTime float64) {
 		playerX += cosA * speed
 		playerY += sinA * speed
 
-		if string(mapRoom[int(playerY)*int(mapWidth)+int(playerX)]) == "#" {
+		if string(mapRoom[int(playerY)*int(MAP_WIDTH)+int(playerX)]) == "#" {
 			playerX -= cosA * speed
 			playerY -= sinA * speed
 		}
@@ -34,7 +34,7 @@ func updatePlayerPosition(floatElapsedTime float64) {
 		playerX -= cosA * speed
 		playerY -= sinA * speed
 
-		if string(mapRoom[int(playerY)*int(mapWidth)+int(playerX)]) == "#" {
+		if string(mapRoom[int(playerY)*int(MAP_WIDTH)+int(playerX)]) == "#" {
 			playerX += cosA * speed
 			playerY += sinA * speed
 		}
@@ -44,7 +44,7 @@ func updatePlayerPosition(floatElapsedTime float64) {
 		playerX += sinA * speed
 		playerY -= cosA * speed
 
-		if string(mapRoom[int(playerY)*int(mapWidth)+int(playerX)]) == "#" {
+		if string(mapRoom[int(playerY)*int(MAP_WIDTH)+int(playerX)]) == "#" {
 			playerX -= sinA * speed
 			playerY += cosA * speed
 		}
@@ -54,7 +54,7 @@ func updatePlayerPosition(floatElapsedTime float64) {
 		playerX -= sinA * speed
 		playerY += cosA * speed
 
-		if string(mapRoom[int(playerY)*int(mapWidth)+int(playerX)]) == "#" {
+		if string(mapRoom[int(playerY)*int(MAP_WIDTH)+int(playerX)]) == "#" {
 			playerX += sinA * speed
 			playerY -= cosA * speed
 		}
